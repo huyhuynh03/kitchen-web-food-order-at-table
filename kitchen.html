@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Yaki Kitchen</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #121212;
+            color: #fff;
+        }
+
+        header {
+            padding: 15px 20px;
+            background: #1f1f1f;
+            border-bottom: 2px solid #ff4d4d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4d4d;
+        }
+
+        #loginPanel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .login-box {
+            background: #252525;
+            padding: 30px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #ff4d4d;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #ff6666;
+        }
+
+        #dashboard {
+            display: none;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .table-card {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            position: relative;
+        }
+
+        .table-card.active {
+            border: 2px solid #4ade80;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.2);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .table-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            background: #333;
+        }
+
+        .active .status-badge {
+            background: #4ade80;
+            color: #000;
+        }
+
+        .order-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .item-qty-input {
+            width: 40px;
+            padding: 4px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+        }
+
+        .action-btn {
+            background: #444;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .delete-btn {
+            background: #ff4d4d;
+        }
+
+        .footer-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .clear-btn {
+            width: 100%;
+            background: #ff4d4d;
+        }
+    </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+</head>
+
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginPanel">
+        <div class="login-box">
+            <h2>Bếp Yaki</h2>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Mật khẩu">
+            <button onclick="login()">Đăng nhập</button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="mainApp" style="display:none;">
+        <header>
+            <div class="logo">👨‍🍳 Bếp Yaki</div>
+            <button onclick="logout()">Đăng xuất</button>
+        </header>
+
+        <div id="dashboard">
+            <!-- Tables will be rendered here -->
+        </div>
+    </div>
+
+    <script>
+        // TODO: Thay thế bằng config thật của bạn
+        const firebaseConfig = {
+            apiKey: "API_KEY_CUA_BAN",
+            authDomain: "PROJECT_ID.firebaseapp.com",
+            projectId: "PROJECT_ID",
+            storageBucket: "PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Auth Listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById("loginPanel").style.display = "none";
+                document.getElementById("mainApp").style.display = "block";
+                document.getElementById("dashboard").style.display = "grid"; // Fix display
+                loadTables();
+            } else {
+                document.getElementById("loginPanel").style.display = "flex";
+                document.getElementById("mainApp").style.display = "none";
+            }
+        });
+
+        function login() {
+            const email = document.getElementById("email").value;
+            const pass = document.getElementById("password").value;
+            auth.signInWithEmailAndPassword(email, pass).catch(e => alert(e.message));
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        function loadTables() {
+            db.collection("tables").onSnapshot(snapshot => {
+                const dashboard = document.getElementById("dashboard");
+                dashboard.innerHTML = "";
+
+                // Sắp xếp bàn theo ID (table_1, table_2...)
+                const docs = snapshot.docs.sort((a, b) => {
+                    const numA = parseInt(a.id.split('_')[1]);
+                    const numB = parseInt(b.id.split('_')[1]);
+                    return numA - numB;
+                });
+
+                docs.forEach(doc => {
+                    const data = doc.data();
+                    const isActive = data.status === "active";
+
+                    let ordersHtml = "";
+                    if (data.orders && data.orders.length > 0) {
+                        data.orders.forEach((item, index) => {
+                            // Tên món: hỗ trợ đa ngôn ngữ, lấy tiếng Việt mặc định hoặc object
+                            const name = typeof item.name === 'object' ? item.name.vi : item.name;
+
+                            ordersHtml += `
+                                <div class="order-item">
+                                    <span>${name}</span>
+                                    <div>
+                                        <input type="number" class="item-qty-input" value="${item.qty}" 
+                                            onchange="updateOrderQty('${doc.id}', ${index}, this.value)">
+                                        <button class="action-btn delete-btn" onclick="deleteOrderItem('${doc.id}', ${index})">X</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        ordersHtml = "<div style='color:#777; font-style:italic;'>Chưa có món</div>";
+                    }
+
+                    dashboard.innerHTML += `
+                        <div class="table-card ${isActive ? 'active' : ''}">
+                            <div class="table-header">
+                                <div class="table-name">${data.name || doc.id}</div>
+                                <div class="status-badge">${isActive ? 'Đang phục vụ' : 'Trống'}</div>
+                            </div>
+                            
+                            <div class="order-list">
+                                ${ordersHtml}
+                            </div>
+
+                            <div class="footer-actions">
+                                <button class="clear-btn" onclick="clearTable('${doc.id}')">
+                                    ${isActive ? 'Thanh toán / Xóa bàn' : 'Mở khóa bàn'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        async function updateOrderQty(tableId, index, newQty) {
+            newQty = parseInt(newQty);
+            if (newQty < 0) return;
+
+            const ref = db.collection("tables").doc(tableId);
+            const doc = await ref.get();
+            const orders = doc.data().orders;
+
+            if (newQty === 0) {
+                orders.splice(index, 1);
+            } else {
+                orders[index].qty = newQty;
+            }
+
+            // Tính lại tổng tiền nếu cần (ở đây chỉ update list)
+            await ref.update({ orders: orders });
+        }
+
+        async function deleteOrderItem(tableId, index) {
+            if (!confirm("Xóa món này?")) return;
+            const ref = db.collection("tables").doc(tableId);
+            const doc = await ref.get();
+            const orders = doc.data().orders;
+
+            orders.splice(index, 1);
+            await ref.update({ orders: orders });
+        }
+
+        async function clearTable(tableId) {
+            if (!confirm("Bạn có chắc muốn xóa bàn này và mở khóa?")) return;
+
+            await db.collection("tables").doc(tableId).update({
+                status: "free",
+                orders: [],
+                total: 0
+            });
+        }
+
+    </script>
+</body>
+
+</html>
