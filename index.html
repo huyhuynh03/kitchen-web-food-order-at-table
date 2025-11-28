@@ -192,12 +192,12 @@
     <script>
         // TODO: Thay thế bằng config thật của bạn
         const firebaseConfig = {
-            apiKey: "AIzaSyCCTaXqidGM4DIyJnz1-zbg_6PdxmDpV30",
-            authDomain: "food-order-at-table-to-kitchen.firebaseapp.com",
-            projectId: "food-order-at-table-to-kitchen",
-            storageBucket: "food-order-at-table-to-kitchen.firebasestorage.app",
-            messagingSenderId: "179233667372",
-            appId: "1:179233667372:web:76170af27a89ff778a9489"
+            apiKey: "API_KEY_CUA_BAN",
+            authDomain: "PROJECT_ID.firebaseapp.com",
+            projectId: "PROJECT_ID",
+            storageBucket: "PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -241,12 +241,26 @@
 
                 docs.forEach(doc => {
                     const data = doc.data();
-                    const isActive = data.status === "active";
+                    // Không còn phân biệt active/free, chỉ kiểm tra có món hay không
+                    const hasOrders = data.orders && data.orders.length > 0;
 
                     let ordersHtml = "";
-                    if (data.orders && data.orders.length > 0) {
-                        data.orders.forEach((item, index) => {
-                            // Tên món: hỗ trợ đa ngôn ngữ, lấy tiếng Việt mặc định hoặc object
+                    if (hasOrders) {
+                        // Gộp các món giống nhau (Aggregation)
+                        const aggregatedOrders = {};
+
+                        data.orders.forEach(item => {
+                            const id = item.id;
+                            if (!aggregatedOrders[id]) {
+                                aggregatedOrders[id] = { ...item }; // Clone item
+                            } else {
+                                aggregatedOrders[id].qty = Number(aggregatedOrders[id].qty) + Number(item.qty);
+                            }
+                        });
+
+                        // Render danh sách đã gộp
+                        Object.values(aggregatedOrders).forEach(item => {
+                            // Tên món: hỗ trợ đa ngôn ngữ
                             const name = typeof item.name === 'object' ? item.name.vi : item.name;
 
                             ordersHtml += `
@@ -254,8 +268,8 @@
                                     <span>${name}</span>
                                     <div>
                                         <input type="number" class="item-qty-input" value="${item.qty}" 
-                                            onchange="updateOrderQty('${doc.id}', ${index}, this.value)">
-                                        <button class="action-btn delete-btn" onclick="deleteOrderItem('${doc.id}', ${index})">X</button>
+                                            onchange="updateOrderQty('${doc.id}', ${item.id}, this.value)">
+                                        <button class="action-btn delete-btn" onclick="deleteOrderItem('${doc.id}', ${item.id})">X</button>
                                     </div>
                                 </div>
                             `;
@@ -265,10 +279,11 @@
                     }
 
                     dashboard.innerHTML += `
-                        <div class="table-card ${isActive ? 'active' : ''}">
+                        <div class="table-card ${hasOrders ? 'active' : ''}">
                             <div class="table-header">
                                 <div class="table-name">${data.name || doc.id}</div>
-                                <div class="status-badge">${isActive ? 'Đang phục vụ' : 'Trống'}</div>
+                                <!-- Ẩn badge trạng thái hoặc chỉ hiện khi có món -->
+                                <div class="status-badge" style="visibility: ${hasOrders ? 'visible' : 'hidden'}">Đang phục vụ</div>
                             </div>
                             
                             <div class="order-list">
@@ -277,7 +292,7 @@
 
                             <div class="footer-actions">
                                 <button class="clear-btn" onclick="clearTable('${doc.id}')">
-                                    ${isActive ? 'Thanh toán / Xóa bàn' : 'Mở khóa bàn'}
+                                    Xóa món / Thanh toán
                                 </button>
                             </div>
                         </div>
@@ -286,41 +301,52 @@
             });
         }
 
-        async function updateOrderQty(tableId, index, newQty) {
+        async function updateOrderQty(tableId, itemId, newQty) {
             newQty = parseInt(newQty);
             if (newQty < 0) return;
 
             const ref = db.collection("tables").doc(tableId);
             const doc = await ref.get();
-            const orders = doc.data().orders;
+            let orders = doc.data().orders || [];
 
-            if (newQty === 0) {
-                orders.splice(index, 1);
-            } else {
-                orders[index].qty = newQty;
+            // Tìm thông tin món (để giữ lại name, price, etc. nếu cần tạo lại)
+            const itemInfo = orders.find(o => o.id == itemId);
+            if (!itemInfo) return; // Should not happen
+
+            // Xóa tất cả các entry cũ của món này (để tránh duplicate lẻ tẻ)
+            orders = orders.filter(o => o.id != itemId);
+
+            // Nếu số lượng > 0, thêm lại 1 entry gộp
+            if (newQty > 0) {
+                orders.push({
+                    ...itemInfo,
+                    qty: newQty
+                });
             }
 
-            // Tính lại tổng tiền nếu cần (ở đây chỉ update list)
             await ref.update({ orders: orders });
         }
 
-        async function deleteOrderItem(tableId, index) {
+        async function deleteOrderItem(tableId, itemId) {
             if (!confirm("Xóa món này?")) return;
             const ref = db.collection("tables").doc(tableId);
             const doc = await ref.get();
-            const orders = doc.data().orders;
+            let orders = doc.data().orders || [];
 
-            orders.splice(index, 1);
+            // Xóa tất cả entry có id này
+            orders = orders.filter(o => o.id != itemId);
+
             await ref.update({ orders: orders });
         }
 
         async function clearTable(tableId) {
-            if (!confirm("Bạn có chắc muốn xóa bàn này và mở khóa?")) return;
+            if (!confirm("Bạn có chắc muốn xóa hết món của bàn này?")) return;
 
+            // Chỉ xóa orders, không set status free nữa (hoặc giữ status active để client biết)
             await db.collection("tables").doc(tableId).update({
-                status: "free",
                 orders: [],
                 total: 0
+                // status: "active" // Giữ nguyên active hoặc không đụng đến
             });
         }
 
@@ -328,4 +354,3 @@
 </body>
 
 </html>
-
