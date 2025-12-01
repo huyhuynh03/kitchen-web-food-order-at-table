@@ -163,25 +163,197 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-</head>
+    <!DOCTYPE html>
+    <html lang="vi">
+
+    <head>
+        <meta charset="UTF-8">
+        <title>Yaki Kitchen</title>
+        <style>
+            body {
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: #121212;
+                color: #fff;
+            }
+
+            header {
+                padding: 15px 20px;
+                background: #1f1f1f;
+                border-bottom: 2px solid #ff4d4d;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .logo {
+                font-size: 24px;
+                font-weight: bold;
+                color: #ff4d4d;
+            }
+
+            #loginPanel {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+            }
+
+            .login-box {
+                background: #252525;
+                padding: 30px;
+                border-radius: 10px;
+                width: 300px;
+                text-align: center;
+            }
+
+            input {
+                width: 90%;
+                padding: 10px;
+                margin: 10px 0;
+                background: #333;
+                border: 1px solid #555;
+                color: #fff;
+                border-radius: 5px;
+            }
+
+            button {
+                padding: 10px 20px;
+                background: #ff4d4d;
+                color: #fff;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+            }
+
+            button:hover {
+                background: #ff6666;
+            }
+
+            #dashboard {
+                display: none;
+                padding: 20px;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 20px;
+            }
+
+            .table-card {
+                background: #1e1e1e;
+                border: 1px solid #333;
+                border-radius: 10px;
+                padding: 15px;
+                position: relative;
+            }
+
+            .table-card.active {
+                border: 2px solid #4ade80;
+                box-shadow: 0 0 10px rgba(74, 222, 128, 0.2);
+            }
+
+            .table-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                border-bottom: 1px solid #333;
+                padding-bottom: 10px;
+            }
+
+            .table-name {
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            .status-badge {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                background: #333;
+            }
+
+            .active .status-badge {
+                background: #4ade80;
+                color: #000;
+            }
+
+            .order-list {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+
+            .order-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 0;
+                border-bottom: 1px solid #2a2a2a;
+            }
+
+            .item-qty-input {
+                width: 40px;
+                padding: 4px;
+                background: #333;
+                border: 1px solid #555;
+                color: #fff;
+                text-align: center;
+                border-radius: 4px;
+            }
+
+            .action-btn {
+                background: #444;
+                padding: 4px 8px;
+                font-size: 12px;
+                margin-left: 5px;
+            }
+
+            .delete-btn {
+                background: #ff4d4d;
+            }
+
+            .footer-actions {
+                margin-top: 15px;
+                display: flex;
+                gap: 10px;
+            }
+
+            .clear-btn {
+                width: 100%;
+                background: #ff4d4d;
+            }
+        </style>
+        <!-- Firebase SDKs -->
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    </head>
 
 <body>
 
     <!-- LOGIN SCREEN -->
     <div id="loginPanel">
         <div class="login-box">
-            <h2>Bếp Yaki</h2>
+            <h2 id="loginTitle">Bếp Yaki</h2>
             <input type="email" id="email" placeholder="Email">
             <input type="password" id="password" placeholder="Mật khẩu">
-            <button onclick="login()">Đăng nhập</button>
+            <button id="loginBtn" onclick="login()">Đăng nhập</button>
         </div>
     </div>
 
     <!-- DASHBOARD -->
     <div id="mainApp" style="display:none;">
         <header>
-            <div class="logo">👨‍🍳 Bếp Yaki</div>
-            <button onclick="logout()">Đăng xuất</button>
+            <div class="logo" id="headerLogo">👨‍🍳 Bếp Yaki</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <select id="langSelect" onchange="changeLanguage(this.value)"
+                    style="padding: 5px; border-radius: 5px; background: #333; color: #fff; border: 1px solid #555;">
+                    <option value="vi">Tiếng Việt</option>
+                    <option value="en">English</option>
+                </select>
+                <button id="logoutBtn" onclick="logout()">Đăng xuất</button>
+            </div>
         </header>
 
         <div id="dashboard">
@@ -204,12 +376,90 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
+        /* ======================= TRANSLATIONS ======================= */
+        const translations = {
+            vi: {
+                title: "Bếp Yaki",
+                login: {
+                    title: "Bếp Yaki",
+                    emailPlaceholder: "Email",
+                    passwordPlaceholder: "Mật khẩu",
+                    btn: "Đăng nhập"
+                },
+                header: {
+                    title: "👨‍🍳 Bếp Yaki",
+                    logout: "Đăng xuất"
+                },
+                dashboard: {
+                    serving: "Đang phục vụ",
+                    noItems: "Chưa có món",
+                    qty: "SL",
+                    total: "Tổng",
+                    clearBtn: "Xóa món / Thanh toán",
+                    confirmDelete: "Xóa món này?",
+                    confirmClear: "Bạn có chắc muốn xóa hết món của bàn này?"
+                }
+            },
+            en: {
+                title: "Yaki Kitchen",
+                login: {
+                    title: "Yaki Kitchen",
+                    emailPlaceholder: "Email",
+                    passwordPlaceholder: "Password",
+                    btn: "Login"
+                },
+                header: {
+                    title: "👨‍🍳 Yaki Kitchen",
+                    logout: "Logout"
+                },
+                dashboard: {
+                    serving: "Serving",
+                    noItems: "No items",
+                    qty: "Qty",
+                    total: "Total",
+                    clearBtn: "Clear / Pay",
+                    confirmDelete: "Delete this item?",
+                    confirmClear: "Are you sure you want to clear this table?"
+                }
+            }
+        };
+
+        let currentLang = localStorage.getItem('kitchenLang') || 'vi';
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('kitchenLang', lang);
+            document.getElementById('langSelect').value = lang;
+            updateStaticText();
+            loadTables(); // Re-render tables with new language
+        }
+
+        function updateStaticText() {
+            const t = translations[currentLang];
+            document.title = t.title;
+
+            // Login Screen
+            document.getElementById('loginTitle').innerText = t.login.title;
+            document.getElementById('email').placeholder = t.login.emailPlaceholder;
+            document.getElementById('password').placeholder = t.login.passwordPlaceholder;
+            document.getElementById('loginBtn').innerText = t.login.btn;
+
+            // Header
+            document.getElementById('headerLogo').innerText = t.header.title;
+            document.getElementById('logoutBtn').innerText = t.header.logout;
+        }
+
+        // Initialize text on load
+        updateStaticText();
+
         // Auth Listener
         auth.onAuthStateChanged(user => {
             if (user) {
                 document.getElementById("loginPanel").style.display = "none";
                 document.getElementById("mainApp").style.display = "block";
                 document.getElementById("dashboard").style.display = "grid"; // Fix display
+                // Set initial language selector value
+                document.getElementById('langSelect').value = currentLang;
                 loadTables();
             } else {
                 document.getElementById("loginPanel").style.display = "flex";
@@ -239,6 +489,8 @@
                     return numA - numB;
                 });
 
+                const t = translations[currentLang].dashboard; // Get current translation
+
                 docs.forEach(doc => {
                     const data = doc.data();
                     // Không còn phân biệt active/free, chỉ kiểm tra có món hay không
@@ -263,7 +515,12 @@
                         // Render danh sách đã gộp
                         Object.values(aggregatedOrders).forEach(item => {
                             // Tên món: hỗ trợ đa ngôn ngữ
-                            const name = typeof item.name === 'object' ? item.name.vi : item.name;
+                            // Nếu item.name là object (đa ngôn ngữ) thì lấy theo currentLang, nếu không thì lấy chính nó
+                            let name = item.name;
+                            if (typeof item.name === 'object') {
+                                name = item.name[currentLang] || item.name.vi || item.name;
+                            }
+
                             const itemTotal = item.qty * item.price;
                             tableTotal += itemTotal;
 
@@ -272,7 +529,7 @@
                                     <div style="flex:1">
                                         <div style="font-weight:bold;">${name}</div>
                                         <div style="font-size:13px; color:#ccc;">
-                                            SL: ${item.qty} × ${item.price.toLocaleString()} đ
+                                            ${t.qty}: ${item.qty} × ${item.price.toLocaleString()} đ
                                         </div>
                                     </div>
                                     
@@ -286,7 +543,7 @@
                             `;
                         });
                     } else {
-                        ordersHtml = "<div style='color:#777; font-style:italic;'>Chưa có món</div>";
+                        ordersHtml = `<div style='color:#777; font-style:italic;'>${t.noItems}</div>`;
                     }
 
                     dashboard.innerHTML += `
@@ -294,7 +551,7 @@
                             <div class="table-header">
                                 <div class="table-name">${data.name || doc.id}</div>
                                 <!-- Ẩn badge trạng thái hoặc chỉ hiện khi có món -->
-                                <div class="status-badge" style="visibility: ${hasOrders ? 'visible' : 'hidden'}">Đang phục vụ</div>
+                                <div class="status-badge" style="visibility: ${hasOrders ? 'visible' : 'hidden'}">${t.serving}</div>
                             </div>
 
                             <div class="order-list">
@@ -303,12 +560,12 @@
 
                             <!-- Hiển thị tổng tiền -->
                              <div style="margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; font-weight: bold; text-align: right; color: #ffa64d;">
-                                Tổng: ${tableTotal.toLocaleString()} đ
+                                ${t.total}: ${tableTotal.toLocaleString()} đ
                             </div>
 
                             <div class="footer-actions">
                                 <button class="clear-btn" onclick="clearTable('${doc.id}')">
-                                    Xóa món / Thanh toán
+                                    ${t.clearBtn}
                                 </button>
                             </div>
                         </div>
@@ -344,7 +601,7 @@
         }
 
         async function deleteOrderItem(tableId, itemId) {
-            if (!confirm("Xóa món này?")) return;
+            if (!confirm(translations[currentLang].dashboard.confirmDelete)) return;
             const ref = db.collection("tables").doc(tableId);
             const doc = await ref.get();
             let orders = doc.data().orders || [];
@@ -356,7 +613,7 @@
         }
 
         async function clearTable(tableId) {
-            if (!confirm("Bạn có chắc muốn xóa hết món của bàn này?")) return;
+            if (!confirm(translations[currentLang].dashboard.confirmClear)) return;
 
             // Chỉ xóa orders, không set status free nữa (hoặc giữ status active để client biết)
             await db.collection("tables").doc(tableId).update({
