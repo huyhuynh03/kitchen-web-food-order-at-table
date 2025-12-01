@@ -245,6 +245,8 @@
                     const hasOrders = data.orders && data.orders.length > 0;
 
                     let ordersHtml = "";
+                    let tableTotal = 0; // Biến tính tổng tiền bàn
+
                     if (hasOrders) {
                         // Gộp các món giống nhau (Aggregation)
                         const aggregatedOrders = {};
@@ -262,13 +264,22 @@
                         Object.values(aggregatedOrders).forEach(item => {
                             // Tên món: hỗ trợ đa ngôn ngữ
                             const name = typeof item.name === 'object' ? item.name.vi : item.name;
+                            const itemTotal = item.qty * item.price;
+                            tableTotal += itemTotal;
 
                             ordersHtml += `
                                 <div class="order-item">
-                                    <span>${name}</span>
-                                    <div>
-                                        <input type="number" class="item-qty-input" value="${item.qty}" 
-                                            onchange="updateOrderQty('${doc.id}', ${item.id}, this.value)">
+                                    <div style="flex:1">
+                                        <div style="font-weight:bold;">${name}</div>
+                                        <div style="font-size:13px; color:#ccc;">
+                                            SL: ${item.qty} × ${item.price.toLocaleString()} đ
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display:flex; align-items:center;">
+                                        <input type="number" class="item-qty-input" value="${item.qty}"
+                                            onchange="updateOrderQty('${doc.id}', ${item.id}, this.value)"
+                                            style="margin-right: 5px;">
                                         <button class="action-btn delete-btn" onclick="deleteOrderItem('${doc.id}', ${item.id})">X</button>
                                     </div>
                                 </div>
@@ -285,9 +296,14 @@
                                 <!-- Ẩn badge trạng thái hoặc chỉ hiện khi có món -->
                                 <div class="status-badge" style="visibility: ${hasOrders ? 'visible' : 'hidden'}">Đang phục vụ</div>
                             </div>
-                            
+
                             <div class="order-list">
                                 ${ordersHtml}
+                            </div>
+
+                            <!-- Hiển thị tổng tiền -->
+                             <div style="margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; font-weight: bold; text-align: right; color: #ffa64d;">
+                                Tổng: ${tableTotal.toLocaleString()} đ
                             </div>
 
                             <div class="footer-actions">
@@ -349,7 +365,6 @@
                 // status: "active" // Giữ nguyên active hoặc không đụng đến
             });
         }
-
     </script>
 </body>
 
