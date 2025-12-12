@@ -445,6 +445,36 @@
         .notification-modal.error .notification-icon {
             animation: shake 0.5s ease;
         }
+
+        /* ======================= LOGIN LANGUAGE SELECTOR ======================= */
+        .login-lang-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .login-lang-selector select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .login-lang-selector select:hover {
+            border-color: #ff4d4d;
+            box-shadow: 0 0 10px rgba(255, 77, 77, 0.3);
+        }
+
+        .login-lang-selector select:focus {
+            outline: none;
+            border-color: #ff4d4d;
+            box-shadow: 0 0 15px rgba(255, 77, 77, 0.4);
+        }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -456,6 +486,14 @@
 
     <!-- LOGIN SCREEN -->
     <div id="loginPanel">
+        <!-- Language Selector for Login Screen -->
+        <div class="login-lang-selector">
+            <select id="loginLangSelect" onchange="changeLanguage(this.value)"
+                style="padding: 8px 12px; border-radius: 8px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; font-size: 14px; transition: all 0.3s ease;">
+                <option value="vi">🇻🇳 Tiếng Việt</option>
+                <option value="en">🇬🇧 English</option>
+            </select>
+        </div>
         <div class="login-box">
             <h2 id="loginTitle">Bếp Yaki</h2>
             <input type="email" id="email" placeholder="Email">
@@ -583,6 +621,12 @@
             document.getElementById('email').placeholder = t.login.emailPlaceholder;
             document.getElementById('password').placeholder = t.login.passwordPlaceholder;
             document.getElementById('loginBtn').innerText = t.login.btn;
+
+            // Sync both language selectors
+            const loginLangSelect = document.getElementById('loginLangSelect');
+            const dashboardLangSelect = document.getElementById('langSelect');
+            if (loginLangSelect) loginLangSelect.value = currentLang;
+            if (dashboardLangSelect) dashboardLangSelect.value = currentLang;
 
             // Header
             document.getElementById('headerLogo').innerText = t.header.title;
